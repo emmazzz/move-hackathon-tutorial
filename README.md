@@ -171,6 +171,57 @@ Now that we've written our first Move module, lets
 
 ### Step 3: Design my ERC20 module
 
+[ERC20 token standard](https://ethereum.org/en/developers/docs/standards/tokens/erc-20/) 
+is one of the most important token standards on Ethereum. It introduces a standard for Fungible Tokens,
+where each token is exactly the same as the other. Examples of such tokens include fiat currencies
+like USD, Reddit Karma points, lottery tickets and so on. 
+
+In this section, we are going to design the Move equivalent of an ERC20 token. ERC20 interface defines
+the signature of nine methods. We are going to include three of the most essential methods in our Move
+contract:
+
+```
+function totalSupply() public view returns (uint256)
+function balanceOf(address _owner) public view returns (uint256 balance)
+function transferFrom(address _from, address _to, uint256 _value) public returns (bool success)
+```
+
+The signatures of the corresponding Move function are the following:
+
+```
+public fun total_supply(): u64;
+public fun balance_of(owner: address): u64;
+public(script) fun transfer_from(from: signer, to: address, amount: u64);
+```
+
+Notice that `total_supply` and `balance_of` are public functions while `transfer` is a _public script_ function.
+Similar to Ethereum, users submit transactions to Move-powered blockchains to update the blockchain state. 
+We can use `transfer` method in a transcript to modify the blockchain state. As mentioned in Step 1, only public script 
+functions can be called from a transaction script. Therefore, we declare `transfer` as a public script function. 
+And by requiring the `from` argument be a `signer` instead of an `address`, we require that the transfer function
+must be signed by the `from` account.
+
+Next we look at the data structs we need for this module. 
+
+In most Ethereum contracts, the balance of each address is stored in a _state variable_ of type 
+`mapping(address => uint256)`. This state variable is stored in the storage of this contract. In Move, however, storage
+works differently. A Move module doesn't have its own storage. Instead, Move "global storage" (what we call our
+blockchain state) is indexed by addresses. Under each address there are Move modules (code) and Move resources (objects).
+The Move resources storage under each address is a map from types to objects. (An observant reader might observe that
+this means each address can only have one object of each type.) This conveniently provides us a native mapping indexed
+by addresses. We can define the following `Balance` resource representing the balance of ERC20 tokens each address holds:
+
+```
+struct Balance has key {
+    coin: Coin // same Coin from Step 1
+}
+```
+
+##TODO: include diagrams here comparing Solidity and Move storage 
+
+
+
+
 ### Step 4: Implement my ERC20 module
 
 ### Step 5: Add unit tests to my ERC20 module

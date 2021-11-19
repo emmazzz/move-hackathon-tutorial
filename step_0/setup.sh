@@ -174,5 +174,9 @@ install_z3
 install_dotnet
 install_boogie
 update_path_and_profile
+echo Installing Move CLI
 cargo install --git https://github.com/diem/diem move-cli --branch main
+echo Move CLI installed
+echo Installing Shuffle
 cargo install --git https://github.com/diem/diem shuffle --branch main
+echo Shuffle installed

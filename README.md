@@ -209,20 +209,56 @@ works differently. A Move module doesn't have its own storage. Instead, Move "gl
 blockchain state) is indexed by addresses. Under each address there are Move modules (code) and Move resources (objects).
 The Move resources storage under each address is a map from types to objects. (An observant reader might observe that
 this means each address can only have one object of each type.) This conveniently provides us a native mapping indexed
-by addresses. We can define the following `Balance` resource representing the balance of ERC20 tokens each address holds:
+by addresses. In our ERC20 contract, we define the following `Balance` resource representing the balance of ERC20 tokens 
+each address holds:
 
 ```
+/// Struct representing the balance of each address.
 struct Balance has key {
     coin: Coin // same Coin from Step 1
 }
 ```
 
-##TODO: include diagrams here comparing Solidity and Move storage 
+We also need a place to hold the total supply of the tokens. In Solidity, we would store this value in a state variable.
+In our Move contract, again we will have to store this value in a struct under some address. A reasonable place to put this 
+struct would be the under module owner's address. You will have a chance to implement this in Step 4.
 
+```
+/// Struct representing the total supply of tokens, 
+/// stored under module owner's address
+struct TotalSupply {
+    supply: u64
+}
+```
 
-
+Roughly the Move blockchain state should look like this:
+![](diagrams/move_state.png)
+In comparison, a Solidity blockchain state might look like this:
+![](diagrams/solidity_state.png)
 
 ### Step 4: Implement my ERC20 module
+
+We are going to develop our module in a Shuffle project directory. Running `shuffle new <path>` will create
+a new Shuffle project directory at the given path. We have already created a Shuffle project directory for you called
+`step_4`. You'll notice there are a lot of files pre-included for you in this directory. There will be another tutorial
+dedicated to how Shuffle works and what these files are. But for now, we will focus on the `sources` folder.
+
+`sources` folder contains all your Move modules with `.move` suffix. `ERC20.move` lives inside this folder. In this
+section, we will take a closer look at the implementation of ERC20 methods inside `ERC20.move`.
+
+- `initialize`
+- `total_supply`
+- `balance_of`
+- `transfer`
+  - `withdraw`
+  - `deposit`
+
+**Exercises**
+
+- Implement `deposit` method
+- Finish implementing `initialize` method
+
+Solutions to exercises are in `step_4_sol` folder.
 
 ### Step 5: Add unit tests to my ERC20 module
 

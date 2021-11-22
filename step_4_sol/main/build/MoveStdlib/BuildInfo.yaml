@@ -1,8 +1,7 @@
 ---
 compiled_package_info:
-  package_name: Message
+  package_name: MoveStdlib
   address_alias_instantiation:
-    Sender: 24163afcc6e33b0a9473852e18327fa9
     Std: "00000000000000000000000000000001"
   module_resolution_metadata:
     ? address: "00000000000000000000000000000001"
@@ -38,13 +37,7 @@ compiled_package_info:
     ? address: "00000000000000000000000000000001"
       name: Vector
     : Std
-    ? address: 24163afcc6e33b0a9473852e18327fa9
-      name: ERC20
-    : Sender
-    ? address: 24163afcc6e33b0a9473852e18327fa9
-      name: Message
-    : Sender
-  source_digest: BD7F41E178BF8180F6D9B67790DE51DA8BCA4DB38BB672A7339A175EE9D10C69
+  source_digest: 7BBFCC96E6F78552A7B4A7CA36FA5C6AE0AD5CAEBBA5DD5F93C0CAB6E117569A
   build_flags:
     dev_mode: true
     test_mode: false
@@ -52,5 +45,4 @@ compiled_package_info:
     generate_abis: true
     install_dir: ~
     force_recompilation: false
-dependencies:
-  - MoveStdlib
+dependencies: []

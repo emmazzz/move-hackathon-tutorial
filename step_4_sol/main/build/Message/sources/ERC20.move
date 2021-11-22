@@ -33,13 +33,11 @@ module Sender::ERC20 {
         Coin { value: amount }
     }
 
-    fun deposit(_addr: address, check: Coin) {
-        // TODO: follow the implementation of `withdraw` and implement me!
-        let Coin { value: _amount } = check; // unpacks the check
-
-        // Get a mutable reference of addr's balance's coin value
-
-        // Increment the value by `amount`
+    fun deposit(addr: address, check: Coin) acquires Balance{
+        let balance = balance_of(addr);
+        let balance_ref = &mut borrow_global_mut<Balance>(addr).coin.value;
+        let Coin { value } = check;
+        *balance_ref = balance + value;
     }
 
     public fun total_supply(): u64 acquires TotalSupply {
@@ -55,17 +53,16 @@ module Sender::ERC20 {
         deposit(to, check);
     }
 
-    public(script) fun initialize_erc20(module_owner: signer, total_supply: u64) {
-        // Only the owner of the module can initialize this module
+    public(script) fun initialize_erc20(module_owner: signer, total_supply: u64) acquires Balance {
         assert!(Signer::address_of(&module_owner) == MODULE_OWNER, ENOT_MODULE_OWNER);
-        assert!(!is_module_initialized(), EALREADY_INITIALIZED);
+        assert!(!is_initialized(), EALREADY_INITIALIZED);
 
         // Publish an empty balance under the module owner's address
         publish_balance(&module_owner);
         // Deposit `total_value` amount of tokens to module owner's balance
         deposit(MODULE_OWNER, Coin { value: total_supply });
-
-        // TODO: publish TotalSupply resource under the module owner's address using `move_to`
+        // Publish TotalSupply resource
+        move_to(&module_owner, TotalSupply { supply: total_supply });
     }
 
     public fun publish_balance(account: &signer) {
@@ -73,6 +70,6 @@ module Sender::ERC20 {
         move_to(account, Balance { coin:  empty_coin });
     }
 
-    fun is_module_initialized(): bool { exists<TotalSupply>(MODULE_OWNER) }
+    fun is_initialized(): bool { exists<TotalSupply>(MODULE_OWNER) }
 }
 

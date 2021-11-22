@@ -1,5 +1,5 @@
 [package]
-name = "Message"
+name = "ERC20"
 version = "0.0.0"
 
 [addresses]

@@ -113,7 +113,7 @@ export class Stdlib {
   }
 
   /**
-
+   * Initialize this module.
    */
   static encodeInitializeErc20ScriptFunction(total_supply: bigint): DiemTypes.TransactionPayload {
     const tyArgs: Seq<DiemTypes.TypeTag> = [];
@@ -143,7 +143,7 @@ export class Stdlib {
   }
 
   /**
-
+   * Transfers `amount` of tokens from `from` to `to`.
    */
   static encodeTransferScriptFunction(to: DiemTypes.AccountAddress, amount: bigint): DiemTypes.TransactionPayload {
     const tyArgs: Seq<DiemTypes.TypeTag> = [];
@@ -222,7 +222,7 @@ export class Stdlib {
 
                 InitializeErc20: {
       stdlibEncodeFunction: Stdlib.encodeInitializeErc20ScriptFunction,
-      description: "",
+      description: " Initialize this module.",
       typeArgs: [],
       args: [
         {name: "total_supply", type: {type: Types.U64}}
@@ -242,7 +242,7 @@ export class Stdlib {
 
                 Transfer: {
       stdlibEncodeFunction: Stdlib.encodeTransferScriptFunction,
-      description: "",
+      description: " Transfers `amount` of tokens from `from` to `to`.",
       typeArgs: [],
       args: [
         {name: "to", type: {type: Types.Address}}, {name: "amount", type: {type: Types.U64}}

@@ -1,6 +1,6 @@
 ---
 compiled_package_info:
-  package_name: Message
+  package_name: ERC20
   address_alias_instantiation:
     Sender: 24163afcc6e33b0a9473852e18327fa9
     Std: "00000000000000000000000000000001"
@@ -44,7 +44,7 @@ compiled_package_info:
     ? address: 24163afcc6e33b0a9473852e18327fa9
       name: Message
     : Sender
-  source_digest: BA23A34DD9EAF0394C3262C10285B1A70B9C8531DF6F4572C4258A9F81A8D9A0
+  source_digest: 97FD578222B74C4A63CC34A282FBF14729C81456A25C46522CDCC1DE1A84F512
   build_flags:
     dev_mode: true
     test_mode: false

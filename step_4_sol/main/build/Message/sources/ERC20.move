@@ -25,19 +25,15 @@ module Sender::ERC20 {
         coin: Coin
     }
 
-    fun withdraw(addr: address, amount: u64) : Coin acquires Balance {
-        let balance = balance_of(addr);
-        assert!(balance >= amount, EINSUFFICIENT_BALANCE);
-        let balance_ref = &mut borrow_global_mut<Balance>(addr).coin.value;
-        *balance_ref = balance - amount;
-        Coin { value: amount }
-    }
+    public(script) fun initialize_erc20(module_owner: signer, total_supply: u64) acquires Balance {
+        assert!(Signer::address_of(&module_owner) == MODULE_OWNER, ENOT_MODULE_OWNER);
 
-    fun deposit(addr: address, check: Coin) acquires Balance{
-        let balance = balance_of(addr);
-        let balance_ref = &mut borrow_global_mut<Balance>(addr).coin.value;
-        let Coin { value } = check;
-        *balance_ref = balance + value;
+        // Publish an empty balance under the module owner's address
+        publish_balance(&module_owner);
+        // Deposit `total_value` amount of tokens to module owner's balance
+        deposit(MODULE_OWNER, Coin { value: total_supply });
+        // Publish TotalSupply resource
+        move_to(&module_owner, TotalSupply { supply: total_supply });
     }
 
     public fun total_supply(): u64 acquires TotalSupply {
@@ -53,23 +49,24 @@ module Sender::ERC20 {
         deposit(to, check);
     }
 
-    public(script) fun initialize_erc20(module_owner: signer, total_supply: u64) acquires Balance {
-        assert!(Signer::address_of(&module_owner) == MODULE_OWNER, ENOT_MODULE_OWNER);
-        assert!(!is_initialized(), EALREADY_INITIALIZED);
-
-        // Publish an empty balance under the module owner's address
-        publish_balance(&module_owner);
-        // Deposit `total_value` amount of tokens to module owner's balance
-        deposit(MODULE_OWNER, Coin { value: total_supply });
-        // Publish TotalSupply resource
-        move_to(&module_owner, TotalSupply { supply: total_supply });
+    fun withdraw(addr: address, amount: u64) : Coin acquires Balance {
+        let balance = balance_of(addr);
+        assert!(balance >= amount, EINSUFFICIENT_BALANCE);
+        let balance_ref = &mut borrow_global_mut<Balance>(addr).coin.value;
+        *balance_ref = balance - amount;
+        Coin { value: amount }
     }
 
-    public fun publish_balance(account: &signer) {
+    fun deposit(addr: address, check: Coin) acquires Balance{
+        let balance = balance_of(addr);
+        let balance_ref = &mut borrow_global_mut<Balance>(addr).coin.value;
+        let Coin { value } = check;
+        *balance_ref = balance + value;
+    }
+
+    fun publish_balance(account: &signer) {
         let empty_coin = Coin { value: 0 };
         move_to(account, Balance { coin:  empty_coin });
     }
-
-    fun is_initialized(): bool { exists<TotalSupply>(MODULE_OWNER) }
 }
 

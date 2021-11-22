@@ -25,6 +25,31 @@ module Sender::ERC20 {
         coin: Coin
     }
 
+    public(script) fun initialize_erc20(module_owner: signer, total_supply: u64) {
+        // Only the owner of the module can initialize this module
+        assert!(Signer::address_of(&module_owner) == MODULE_OWNER, ENOT_MODULE_OWNER);
+
+        // Publish an empty balance under the module owner's address
+        publish_balance(&module_owner);
+        // Deposit `total_value` amount of tokens to module owner's balance
+        deposit(MODULE_OWNER, Coin { value: total_supply });
+
+        // TODO: publish TotalSupply resource under the module owner's address using `move_to`
+    }
+
+    public fun total_supply(): u64 acquires TotalSupply {
+        borrow_global<TotalSupply>(MODULE_OWNER).supply
+    }
+
+    public fun balance_of(owner: address): u64 acquires Balance {
+        borrow_global<Balance>(owner).coin.value
+    }
+
+    public(script) fun transfer(from: signer, to: address, amount: u64) acquires Balance {
+        let check = withdraw(Signer::address_of(&from), amount);
+        deposit(to, check);
+    }
+
     fun withdraw(addr: address, amount: u64) : Coin acquires Balance {
         let balance = balance_of(addr);
         assert!(balance >= amount, EINSUFFICIENT_BALANCE);
@@ -42,37 +67,9 @@ module Sender::ERC20 {
         // Increment the value by `amount`
     }
 
-    public fun total_supply(): u64 acquires TotalSupply {
-        borrow_global<TotalSupply>(MODULE_OWNER).supply
-    }
-
-    public fun balance_of(owner: address): u64 acquires Balance {
-        borrow_global<Balance>(owner).coin.value
-    }
-
-    public(script) fun transfer(from: signer, to: address, amount: u64) acquires Balance {
-        let check = withdraw(Signer::address_of(&from), amount);
-        deposit(to, check);
-    }
-
-    public(script) fun initialize_erc20(module_owner: signer, total_supply: u64) {
-        // Only the owner of the module can initialize this module
-        assert!(Signer::address_of(&module_owner) == MODULE_OWNER, ENOT_MODULE_OWNER);
-        assert!(!is_module_initialized(), EALREADY_INITIALIZED);
-
-        // Publish an empty balance under the module owner's address
-        publish_balance(&module_owner);
-        // Deposit `total_value` amount of tokens to module owner's balance
-        deposit(MODULE_OWNER, Coin { value: total_supply });
-
-        // TODO: publish TotalSupply resource under the module owner's address using `move_to`
-    }
-
-    public fun publish_balance(account: &signer) {
+    fun publish_balance(account: &signer) {
         let empty_coin = Coin { value: 0 };
         move_to(account, Balance { coin:  empty_coin });
     }
-
-    fun is_module_initialized(): bool { exists<TotalSupply>(MODULE_OWNER) }
 }
 

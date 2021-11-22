@@ -177,7 +177,7 @@ where each token is exactly the same as the other. Examples of such tokens inclu
 like USD, Reddit Karma points, lottery tickets and so on. 
 
 In this section, we are going to design the Move equivalent of an ERC20 token. ERC20 interface defines
-the signature of nine methods. We are going to include three of the most essential methods in our Move
+the signatures of nine methods. We are going to include three of the most essential methods in our Move
 contract:
 
 ```
@@ -189,27 +189,38 @@ function transferFrom(address _from, address _to, uint256 _value) public returns
 The signatures of the corresponding Move function are the following:
 
 ```
-public fun total_supply(): u64;
-public fun balance_of(owner: address): u64;
-public(script) fun transfer_from(from: signer, to: address, amount: u64);
+public fun total_supply(): u64 acquires TotalSupply;
+public fun balance_of(owner: address): u64 acquires Balance;
+public(script) fun transfer(from: signer, to: address, amount: u64) acquires Balance;
 ```
+At the end of each function signature is an `acquires` list containing all the resources defined in this module accessed by the function.
 
 Notice that `total_supply` and `balance_of` are public functions while `transfer` is a _public script_ function.
-Similar to Ethereum, users submit transactions to Move-powered blockchains to update the blockchain state. 
-We can use `transfer` method in a transcript to modify the blockchain state. As mentioned in Step 1, only public script 
+Similar to Ethereum, users submit signed transactions to Move-powered blockchains to update the blockchain state. 
+We can invoke `transfer` method in a transaction script to modify the blockchain state. As mentioned in Step 1, only public script 
 functions can be called from a transaction script. Therefore, we declare `transfer` as a public script function. 
-And by requiring the `from` argument be a `signer` instead of an `address`, we require that the transfer function
+And by requiring the `from` argument be a `signer` instead of an `address`, we require that the transfer transaction
 must be signed by the `from` account.
 
 Next we look at the data structs we need for this module. 
 
 In most Ethereum contracts, the balance of each address is stored in a _state variable_ of type 
-`mapping(address => uint256)`. This state variable is stored in the storage of this contract. In Move, however, storage
+`mapping(address => uint256)`. This state variable is stored in the storage of a particular smart contract. In Move, however, storage
 works differently. A Move module doesn't have its own storage. Instead, Move "global storage" (what we call our
-blockchain state) is indexed by addresses. Under each address there are Move modules (code) and Move resources (objects).
-The Move resources storage under each address is a map from types to objects. (An observant reader might observe that
-this means each address can only have one object of each type.) This conveniently provides us a native mapping indexed
-by addresses. In our ERC20 contract, we define the following `Balance` resource representing the balance of ERC20 tokens 
+blockchain state) is indexed by addresses. Under each address there are Move modules (code) and Move resources (values).
+
+The global storage looks roughly like
+
+```
+struct GlobalStorage {
+    resources: Map<address, Map<ResourceType, ResourceValue>>
+    modules: Map<address, Map<ModuleName, ModuleBytecode>>
+}
+```
+
+The Move resource storage under each address is a map from types to values. (An observant reader might observe that
+this means each address can only have one value of each type.) This conveniently provides us a native mapping indexed
+by addresses. In our ERC20 module, we define the following `Balance` resource representing the number of ERC20 tokens 
 each address holds:
 
 ```
@@ -220,8 +231,8 @@ struct Balance has key {
 ```
 
 We also need a place to hold the total supply of the tokens. In Solidity, we would store this value in a state variable.
-In our Move contract, again we will have to store this value in a struct under some address. A reasonable place to put this 
-struct would be the under module owner's address. You will have a chance to implement this in Step 4.
+In our Move module, again we will have to store this value in a struct under some address. A reasonable place to put this 
+struct would be under module owner's address. You will have a chance to implement this in Step 4.
 
 ```
 /// Struct representing the total supply of tokens, 
@@ -238,27 +249,84 @@ In comparison, a Solidity blockchain state might look like this:
 
 ### Step 4: Implement my ERC20 module
 
-We are going to develop our module in a Shuffle project directory. Running `shuffle new <path>` will create
+We are going to develop our module in a Shuffle (a developer tool for Move) project directory. Running `shuffle new <path>` will create
 a new Shuffle project directory at the given path. We have already created a Shuffle project directory for you called
 `step_4`. You'll notice there are a lot of files pre-included for you in this directory. There will be another tutorial
-dedicated to how Shuffle works and what these files are. But for now, we will focus on the `sources` folder.
+dedicated to how Shuffle works and what these files are. For now, we will focus on `main/sources` folder inside `step_4`.
 
-`sources` folder contains all your Move modules with `.move` suffix. `ERC20.move` lives inside this folder. In this
+`sources` folder contains source code for all your Move modules, which all have `.move` suffix. `ERC20.move` lives inside this folder. In this
 section, we will take a closer look at the implementation of ERC20 methods inside `ERC20.move`.
 
-- `initialize`
-- `total_supply`
-- `balance_of`
-- `transfer`
-  - `withdraw`
-  - `deposit`
+#### Method `initialize_erc20`
 
-**Exercises**
+Unlike Solidity, Move doesn't have a built-in `constructor` method called at the instantiation of the smart contract. 
+We can, however, define our own initializer that can only be called by the module owner. We enforce this using the  
+assert statement:
+```
+assert!(Signer::address_of(&module_owner) == MODULE_OWNER, ENOT_MODULE_OWNER);
+```
+Assert statements in Move can be used in this way: `assert!(<predicate>, <abort_code>);`. This means that if the `<predicate>`
+is false, then abort the transaction with `<abort_code>`. Here `MODULE_OWNER` and `ENOT_MODULE_OWNER` are both constants 
+defined at the beginning of the module.
 
-- Implement `deposit` method
-- Finish implementing `initialize` method
+We then perform three steps in this order:
+1. Publish an empty `Balance` resource under the module owner's address.
+2. Deposit a coin with value `total_supply` to the newly created balance of the module owner.
+3. Publish a `TotalSupply` resource under the module owner's address using `move_to`. This is a TODO you will fix later.
 
-Solutions to exercises are in `step_4_sol` folder.
+#### Method `total_supply`
+
+In the previous method we looked at, we publish a resource representing total supply of the tokens. For this method, 
+we want to read the value of this resource. We use `borrow_global` to index into global storage:
+```
+borrow_global<TotalSupply>(MODULE_OWNER).supply
+                  ||            ||         ||
+        type of the resource  address  field name
+```
+
+#### Method `balance_of`
+
+Similar to `total_supply`, we use `borrow_global` to read from the global storage.
+```
+borrow_global<Balance>(owner).coin.value
+```
+
+#### Method `transfer`
+This function withdraws tokens from `from`'s balance and deposits the tokens into `to`s balance. We take a closer look 
+at `withdraw` helper function:
+```
+fun withdraw(addr: address, amount: u64) : Coin acquires Balance {
+    let balance = balance_of(addr);
+    assert!(balance >= amount, EINSUFFICIENT_BALANCE);
+    let balance_ref = &mut borrow_global_mut<Balance>(addr).coin.value;
+    *balance_ref = balance - amount;
+    Coin { value: amount }
+}
+```
+At the beginning of the method, we assert that the withdrawing account has enough balance. We then use `borrow_global_mut` 
+to get a mutable reference to the global storage, and `&mut` is used to create a [mutable reference](https://diem.github.io/move/references.html) to a field of a 
+struct. We then modify the balance through this mutable reference and return a new coin with the withdrawn amount. 
+ 
+
+### Compiling our code using Shuffle
+
+Now that we have implemented our ERC20 contract, let's try building it using Shuffle by running the following command 
+in `step_4` folder:
+```
+$ shuffle build
+```
+
+### Exercises
+There are two `TODO`s in our module, left as exercises for the reader:
+- Implement `deposit` method.
+- Finish implementing `initialize` method.
+
+Solutions to these exercises can be found in `step_4_sol`.
+
+**Bonus exercises**
+- Are there any issues or security loopholes with this code?
+- Is the initializer guaranteed to be called before anything else? If not, how can we 
+change the code to provide this guarantee?
 
 ### Step 5: Add unit tests to my ERC20 module
 

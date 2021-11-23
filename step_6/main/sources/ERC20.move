@@ -39,6 +39,7 @@ module Sender::ERC20 {
         deposit<CoinType>(to, check);
     }
 
+
     public fun initialize_erc20<CoinType>(module_owner: &signer, total_supply: u64) acquires Balance {
         // Publish an empty balance under the module owner's address
         publish_balance<CoinType>(module_owner);
@@ -51,4 +52,14 @@ module Sender::ERC20 {
         move_to(account, Balance<CoinType> { coin:  empty_coin });
     }
 }
+
+
+//module EmmaCoin {
+//    const EMMA_ADDR: address = 0x42;
+//    struct EmmaCoin {}
+//    public(script) fun initialize(emma: signer) {
+//        assert(address_of(&emma) == EMMA_ADDR);
+//        initialize_erc20<EmmaCoin>(&emma, 10000, EmmaCoin {});
+//    }
+//}
 

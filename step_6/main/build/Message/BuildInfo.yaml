@@ -44,7 +44,7 @@ compiled_package_info:
     ? address: 24163afcc6e33b0a9473852e18327fa9
       name: Message
     : Sender
-  source_digest: 605850D699758B610295490A119D414F64FF26967EEE85689876E5957AC94A4E
+  source_digest: 9FCE5C5635491740F6BD6C7EDF6472C9FBA6996A27BF1722ECEB155AEE5A4432
   build_flags:
     dev_mode: true
     test_mode: false

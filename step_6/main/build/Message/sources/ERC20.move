@@ -1,7 +1,4 @@
-/// This module defines the following three methods in ERC 20 standard:
-/// function totalSupply() public view returns (uint256)
-/// function balanceOf(address _owner) public view returns (uint256 balance)
-/// function transfer(address _to, uint256 _value) public returns (bool success)
+/// This module defines a minimal and generic ERC 20 token.
 module Sender::ERC20 {
     use Std::Signer;
 
@@ -42,6 +39,7 @@ module Sender::ERC20 {
         deposit<CoinType>(to, check);
     }
 
+
     public fun initialize_erc20<CoinType>(module_owner: &signer, total_supply: u64) acquires Balance {
         // Publish an empty balance under the module owner's address
         publish_balance<CoinType>(module_owner);
@@ -54,4 +52,14 @@ module Sender::ERC20 {
         move_to(account, Balance<CoinType> { coin:  empty_coin });
     }
 }
+
+
+//module EmmaCoin {
+//    const EMMA_ADDR: address = 0x42;
+//    struct EmmaCoin {}
+//    public(script) fun initialize(emma: signer) {
+//        assert(address_of(&emma) == EMMA_ADDR);
+//        initialize_erc20<EmmaCoin>(&emma, 10000, EmmaCoin {});
+//    }
+//}
 

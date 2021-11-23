@@ -177,25 +177,18 @@ where each token is exactly the same as the other. Examples of such tokens inclu
 like USD, Reddit Karma points, lottery tickets and so on. 
 
 In this section, we are going to design the Move equivalent of an ERC20 token. ERC20 interface defines
-the signatures of nine methods. We are going to include three of the most essential methods in our Move
-contract:
+the signatures of nine methods. We are going to include two of the most essential methods in our Move
+contract, `balance_of` and `transfer_from`.
+
+The signatures of these two Move function are the following:
 
 ```
-function totalSupply() public view returns (uint256)
-function balanceOf(address _owner) public view returns (uint256 balance)
-function transferFrom(address _from, address _to, uint256 _value) public returns (bool success)
-```
-
-The signatures of the corresponding Move function are the following:
-
-```
-public fun total_supply(): u64 acquires TotalSupply;
 public fun balance_of(owner: address): u64 acquires Balance;
 public(script) fun transfer(from: signer, to: address, amount: u64) acquires Balance;
 ```
 At the end of each function signature is an `acquires` list containing all the resources defined in this module accessed by the function.
 
-Notice that `total_supply` and `balance_of` are public functions while `transfer` is a _public script_ function.
+Notice that `balance_of` is a public function while `transfer` is a _public script_ function.
 Similar to Ethereum, users submit signed transactions to Move-powered blockchains to update the blockchain state. 
 We can invoke `transfer` method in a transaction script to modify the blockchain state. As mentioned in Step 1, only public script 
 functions can be called from a transaction script. Therefore, we declare `transfer` as a public script function. 
@@ -230,17 +223,7 @@ struct Balance has key {
 }
 ```
 
-We also need a place to hold the total supply of the tokens. In Solidity, we would store this value in a state variable.
-In our Move module, again we will have to store this value in a struct under some address. A reasonable place to put this 
-struct would be under module owner's address. You will have a chance to implement this in Step 4.
-
-```
-/// Struct representing the total supply of tokens, 
-/// stored under module owner's address
-struct TotalSupply {
-    supply: u64
-}
-```
+## TODO: change the diagrams to get rid of total supply 
 
 Roughly the Move blockchain state should look like this:
 ![](diagrams/move_state.png)
@@ -269,26 +252,17 @@ Assert statements in Move can be used in this way: `assert!(<predicate>, <abort_
 is false, then abort the transaction with `<abort_code>`. Here `MODULE_OWNER` and `ENOT_MODULE_OWNER` are both constants 
 defined at the beginning of the module.
 
-We then perform three steps in this order:
+We then perform two operations in this method:
 1. Publish an empty `Balance` resource under the module owner's address.
 2. Deposit a coin with value `total_supply` to the newly created balance of the module owner.
-3. Publish a `TotalSupply` resource under the module owner's address using `move_to`. This is a TODO you will fix later.
-
-#### Method `total_supply`
-
-In the previous method we looked at, we publish a resource representing total supply of the tokens. For this method, 
-we want to read the value of this resource. We use `borrow_global` to index into global storage:
-```
-borrow_global<TotalSupply>(MODULE_OWNER).supply
-                  ||            ||         ||
-        type of the resource  address  field name
-```
 
 #### Method `balance_of`
 
-Similar to `total_supply`, we use `borrow_global` to read from the global storage.
+Similar to `total_supply`, we use `borrow_global`, one of the global storage operators, to read from the global storage.
 ```
 borrow_global<Balance>(owner).coin.value
+                 |       |       \    /
+        resource type  address  field names
 ```
 
 #### Method `transfer`
@@ -317,14 +291,13 @@ $ shuffle build
 ```
 
 ### Exercises
-There are two `TODO`s in our module, left as exercises for the reader:
+There is a `TODO` in our module, left as an exercise for the reader:
 - Implement `deposit` method.
-- Finish implementing `initialize` method.
 
-Solutions to these exercises can be found in `step_4_sol`.
+The solution to this exercise can be found in `step_4_sol`.
 
 **Bonus exercises**
-- Are there any issues or security loopholes with this code?
+- What would happen if we deposit too many tokens to a balance?
 - Is the initializer guaranteed to be called before anything else? If not, how can we 
 change the code to provide this guarantee?
 

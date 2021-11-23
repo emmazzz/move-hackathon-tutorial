@@ -20,12 +20,6 @@ module Sender::ERC20 {
         coin: Coin
     }
 
-    /// Struct representing the total supply of tokens,
-    /// stored under module owner's address
-    struct TotalSupply has key {
-        supply: u64
-    }
-
     /// Initialize this module.
     public(script) fun initialize_erc20(module_owner: signer, total_supply: u64) acquires Balance {
         // Only the owner of the module can initialize this module
@@ -35,8 +29,6 @@ module Sender::ERC20 {
         publish_balance(&module_owner);
         // Deposit `total_value` amount of tokens to module owner's balance
         deposit(MODULE_OWNER, Coin { value: total_supply });
-        // Publish TotalSupply resource
-        move_to(&module_owner, TotalSupply { supply: total_supply });
     }
 
     /// Publish an empty balance resource under `account`'s address.
@@ -49,12 +41,6 @@ module Sender::ERC20 {
     /// Returns the balance of `owner`.
     public fun balance_of(owner: address): u64 acquires Balance {
         borrow_global<Balance>(owner).coin.value
-    }
-
-    /// Returns the total supply of tokens. This should always return the same number since we
-    /// don't have any way to mint or burn coins right now.
-    public fun total_supply(): u64 acquires TotalSupply {
-        borrow_global<TotalSupply>(MODULE_OWNER).supply
     }
 
     /// Transfers `amount` of tokens from `from` to `to`.

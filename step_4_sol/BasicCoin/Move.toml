@@ -1,0 +1,10 @@
+[package]
+name = "BasicCoin"
+version = "0.0.0"
+
+[addresses]
+NamedAddr = "0xDEADBEEF"
+
+[dependencies]
+# Specify a git dep on a specific commit hash.
+MoveStdlib = { git = "https://github.com/diem/diem.git", subdir = "language/move-stdlib", addr_subst = { "Std" = "0x1" }, rev = "1599cdc1b76bbc29b5bcc86ca2dd3b3a6a7fccc7" }

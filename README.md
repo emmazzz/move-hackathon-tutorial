@@ -169,18 +169,12 @@ Now that we've written our first Move module, lets
 #### Exercise?
 * Implement withdraw and deposit and add tests for them
 
-### Step 3: Design my ERC20 module
+### Step 3: Design my BasicCoin module
 
-[ERC20 token standard](https://ethereum.org/en/developers/docs/standards/tokens/erc-20/) 
-is one of the most important token standards on Ethereum. It introduces a standard for Fungible Tokens,
-where each token is exactly the same as the other. Examples of such tokens include fiat currencies
-like USD, Reddit Karma points, lottery tickets and so on. 
+In this section, we are going to design a module implementing a basic coin and balance interface, where coins can
+be minted and transferred between balances under different addresses.
 
-In this section, we are going to design the Move equivalent of an ERC20 token. ERC20 interface defines
-the signatures of nine methods. We are going to include two of the most essential methods in our Move
-contract, `balance_of` and `transfer_from`.
-
-The signatures of these two Move function are the following:
+The signatures of the public Move function are the following:
 
 ```
 public fun balance_of(owner: address): u64 acquires Balance;
@@ -213,7 +207,7 @@ struct GlobalStorage {
 
 The Move resource storage under each address is a map from types to values. (An observant reader might observe that
 this means each address can only have one value of each type.) This conveniently provides us a native mapping indexed
-by addresses. In our ERC20 module, we define the following `Balance` resource representing the number of ERC20 tokens 
+by addresses. In our BasicCoin module, we define the following `Balance` resource representing the number of coins 
 each address holds:
 
 ```
@@ -230,17 +224,13 @@ Roughly the Move blockchain state should look like this:
 In comparison, a Solidity blockchain state might look like this:
 ![](diagrams/solidity_state.png)
 
-### Step 4: Implement my ERC20 module
+### Step 4: Implement my BasicCoin module
 
-We are going to develop our module in a Shuffle (a developer tool for Move) project directory. Running `shuffle new <path>` will create
-a new Shuffle project directory at the given path. We have already created a Shuffle project directory for you called
-`step_4`. You'll notice there are a lot of files pre-included for you in this directory. There will be another tutorial
-dedicated to how Shuffle works and what these files are. For now, we will focus on `main/sources` folder inside `step_4`.
+We have created a Move package for you in folder `step_4` called `BasicCoin`. `sources` folder contains source code for 
+all your Move modules. `BasicCoin.move` lives inside this folder. In this section, we will take a closer look at the 
+implementation of the methods inside `BasicCoin.move`.
 
-`sources` folder contains source code for all your Move modules, which all have `.move` suffix. `ERC20.move` lives inside this folder. In this
-section, we will take a closer look at the implementation of ERC20 methods inside `ERC20.move`.
-
-#### Method `initialize_erc20`
+#### Method `initialize`
 
 Unlike Solidity, Move doesn't have a built-in `constructor` method called at the instantiation of the smart contract. 
 We can, however, define our own initializer that can only be called by the module owner. We enforce this using the  
@@ -282,12 +272,12 @@ to get a mutable reference to the global storage, and `&mut` is used to create a
 struct. We then modify the balance through this mutable reference and return a new coin with the withdrawn amount. 
  
 
-### Compiling our code using Shuffle
+### Compiling our code 
 
-Now that we have implemented our ERC20 contract, let's try building it using Shuffle by running the following command 
-in `step_4` folder:
+Now that we have implemented our BasicCoin contract, let's try building it using Move package by running the following command 
+in `step_4/BasicCoin` folder:
 ```
-$ shuffle build
+$ mpm build
 ```
 
 ### Exercises
@@ -301,15 +291,19 @@ The solution to this exercise can be found in `step_4_sol`.
 - Is the initializer guaranteed to be called before anything else? If not, how can we 
 change the code to provide this guarantee?
 
-### Step 5: Add unit tests to my ERC20 module
+### Step 5: Add unit tests to my BasicCoin module
 
-### Step 6: Make my ERC20 module generic
+### Step 6: Make my BasicCoin module generic
+
+Emphasize key advantage of generics in Move:
+- unlike ERC20, we can reuse code
+- provide an actual standard implementation as a library module
 
 ## Advanced steps
 
-### Step 7: Write formal specifications for my ERC20 module
+### Step 7: Write formal specifications for my BasicCoin module
 
-### Step 8: Formally verify my ERC20 module using Move Prover
+### Step 8: Formally verify my BasicCoin module using Move Prover
 
 
 Footnotes

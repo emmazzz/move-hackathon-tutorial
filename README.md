@@ -303,7 +303,118 @@ Emphasize key advantage of generics in Move:
 
 ### Step 7: Write formal specifications for my BasicCoin module
 
+The blockchain requires high assurance. Smart contracts deployed on the blockchain may maniputate high-value assets, which are targets of highly-motivated and well-resourced adversaries. Hundreds of millions of dollars have been lost from bugs on other blockchains. As a technique that uses strict mathematical methods to describe behavior and reason correctness of computer systems, formal verification has been used in blockchains to prevent bugs in smart contracts. [The Move prover](https://github.com/diem/diem/tree/main/language/move-prover) is an evolving formal verification tool for smart contracts written in the Move language. It supports complete specification of functional properties of smart contracts. Properties can be verified automatically efficiently (only slightly slower than a linter). Moreover, it can be integrated in the CI system for re-verification after every change to the code base. In this step, we will define the formal specification of the `BasicCoin` module.  
+
+The property specification is written in the [Move Specification Language (MSL)](https://github.com/diem/diem/blob/main/language/move-prover/doc/user/spec-lang.md). Developers can provide pre and post conditions for functions, which include conditions over (mutable) parameters and global memory. Developers can also provide invariants over data structures, as well as the (state-dependent) content of the global memory. Universal and existential quantification both over bounded domains (like the indices of a vector) as well of unbounded domains (like all memory addresses, all integers, etc.) are supported. In this tutorial, we will learn how to define functional properties for methods. 
+
+#### Method `withdraw`
+
+The signature of the method `withdraw` is given below:
+```
+fun withdraw<CoinType>(addr: address, amount: u64) : Coin<CoinType> acquires Balance
+```
+
+The method withdraws tokens with value `amount` from the address `addr` and returns a created Coin of value `amount`. The specification is defined in the `spec withdraw` block:
+
+```
+   spec withdraw {
+        // The property of the method withdraw is defined here.
+    }
+```
+
+For a function, we usually want to define when it aborts, the expected effect on the global memory, and its return value. MSL provides `aborts_if` to define conditions under which the function aborts. The method `withdraw` aborts when 1) `addr` does not have the resource `Balance<CoinType>` or 2) the number of tokens in `addr` is smaller than `amount`. We can define conditions like this:
+
+```
+   spec withdraw {
+        let balance = global<Balance<CoinType>>(addr).coin.value;
+        aborts_if !exists<Balance<CoinType>>(addr);
+        aborts_if balance < amount;
+    }
+```
+
+As we can see here, a spec block can contain let bindings which introduce names for expressions. `global<T>(address): T` is a built-in function that returns the resource value at `addr`. `balance` is the number of tokens owned by `addr`. `exists<T>(address): bool` is a built-in function that returns true if the resource T exists at address. Two `aborts_if` clauses correspond to the two conditions mentioned above. In general, if a function has more than one `aborts_if` condition, those conditions are or-ed with each other. By default, if a user wants to specify aborts conditions, all possible conditions need to be listed. Otherwise, the prover will generate a verification error. However, if `pragma aborts_if_is_partial` is defined in the spec block, the combined aborts condition (the or-ed individual conditions) only *imply* that the function aborts. The reader can refer to the [MSL](https://github.com/diem/diem/blob/main/language/move-prover/doc/user/spec-lang.md) document for more information. 
+
+The next step is to define functional properties, which are described in the two `ensures` clauses below. First, by using the `let post` binding, `balance_post` represents the balance of `addr` after the execution, which should be equal to `balance - amount`. Then, the return value (denoted as `result`) should be a coin with value `amount`. 
+
+```
+   spec withdraw {
+        let balance = global<Balance<CoinType>>(addr).coin.value;
+        aborts_if !exists<Balance<CoinType>>(addr);
+        aborts_if balance < amount;
+        
+        let post balance_post = global<Balance<CoinType>>(addr).coin.value;
+        ensures balance_post == balance - amount;
+        ensures result == Coin<CoinType> { value: amount };
+    }
+```
+
+
+#### Method `deposit`
+
+
+The signature of the method `deposit` is given below:
+
+```
+fun deposit<CoinType>(addr: address, check: Coin<CoinType>) acquires Balance
+```
+
+The method deposits the `check` into `addr`. The specification is defined below:
+
+```
+    spec deposit {
+        let balance = global<Balance<CoinType>>(addr).coin.value;
+        let check_value = check.value;
+
+        aborts_if !exists<Balance<CoinType>>(addr);
+        aborts_if balance + check_value > MAX_U64;
+
+        let post balance_post = global<Balance<CoinType>>(addr).coin.value;
+        ensures balance_post == balance + check_value;
+    }
+```
+
+`balance` represents the number of tokens in `addr` before execution and `check_value` represents the number of tokens to be deposited. The method would abort if 1) `addr` does not have the resource `Balance<CoinType>` or 2) the sum of `balance` and `check_value` is greater than the maxium value of the type `u64`. The functional property checks that the balance is correctly updated after the execution. 
+
+
+#### Method `transfer`
+
+The signature of the method `transfer` is given below:
+
+```
+public(script) fun transfer<CoinType>(from: signer, to: address, amount: u64) acquires Balance
+```
+
+The method transfers the `amount` of coin from the account of `from` to the address `to`. 
+
+```
+spec transfer {
+        let addr_from = Signer::address_of(from);
+
+        let balance_from = global<Balance<CoinType>>(addr_from).coin.value;
+        let balance_to = global<Balance<CoinType>>(to).coin.value;
+        
+        let post balance_from_post = global<Balance<CoinType>>(addr_from).coin.value;
+        let post balance_to_post = global<Balance<CoinType>>(to).coin.value;
+
+        ensures addr_from != to ==> balance_from_post == balance_from - amount;
+        ensures addr_from != to ==> balance_to_post == balance_to + amount;
+        ensures addr_from == to ==> balance_from_post == balance_from;
+    }
+```
+
+The function `Signer::address_of` is called to obtain the address of `from`. Then the balances of `addr_from` and `to` before and after the execution are obtained. In the three `ensures` clauses, `p ==> q` is used to represented the logical implication between p and q. If the source and the target addresses are the same, the balance remains the same. Otherwise, `amount` is deducted from `addr_from` and added to `to`. The aborts conditions are left as an exercise. 
+
+
+### Exercises
+- Implement the aborts_if conditions for the `transfer` method.
+- Implement the specification for the `initialize` and `publish_balance` method.
+
+The solution to this exercise can be found in `step_7_sol`.
+
 ### Step 8: Formally verify my BasicCoin module using Move Prover
+
+
+We can use the command `mpm -p <path/to/BasicCoin> prove` to prove properties for the BasicCoin module. More prover options can be found [here](https://github.com/diem/diem/blob/main/language/move-prover/doc/user/prover-guide.md).
 
 
 Footnotes

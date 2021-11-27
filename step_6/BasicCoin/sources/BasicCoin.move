@@ -34,8 +34,8 @@ module NamedAddr::BasicCoin {
         borrow_global<Balance<CoinType>>(owner).coin.value
     }
 
-    public(script) fun transfer<CoinType>(from: signer, to: address, amount: u64) acquires Balance {
-        let check = withdraw<CoinType>(Signer::address_of(&from), amount);
+    public fun transfer<CoinType: drop>(from: &signer, to: address, amount: u64, _witness: CoinType) acquires Balance {
+        let check = withdraw<CoinType>(Signer::address_of(from), amount);
         deposit<CoinType>(to, check);
     }
 
@@ -52,14 +52,3 @@ module NamedAddr::BasicCoin {
         move_to(account, Balance<CoinType> { coin:  empty_coin });
     }
 }
-
-
-//module EmmaCoin {
-//    const EMMA_ADDR: address = 0x42;
-//    struct EmmaCoin {}
-//    public(script) fun initialize(emma: signer) {
-//        assert(address_of(&emma) == EMMA_ADDR);
-//        initialize_erc20<EmmaCoin>(&emma, 10000, EmmaCoin {});
-//    }
-//}
-

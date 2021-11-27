@@ -1,4 +1,4 @@
-/// This module defines a minimal ERC 20 token.
+/// This module defines a minimal Coin and Balance.
 module NamedAddr::BasicCoin {
     use Std::Errors;
     use Std::Signer;

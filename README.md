@@ -295,9 +295,45 @@ change the code to provide this guarantee?
 
 ### Step 6: Make my BasicCoin module generic
 
-Emphasize key advantage of generics in Move:
-- unlike ERC20, we can reuse code
-- provide an actual standard implementation as a library module
+In Move, we can use generics to define functions and structs over different input data types. Generics are a great 
+building block for library code. In this section, we are going to make our simple Coin module generic so that it can 
+serve as a library module that can be used by other user modules.
+
+First, we add type parameters to our data structs:
+```
+struct Coin<phantom CoinType> has store {
+    value: u64
+}
+
+struct Balance<phantom CoinType> has key {
+    coin: Coin<CoinType>
+}
+```
+
+Here we declare the type parameter `CoinType` to be _phantom_ because `CoinType` is not used in the struct definition 
+or is only used as a phantom type parameter. There are ability constraints you can add to a type parameter to require
+that the type parameter has certain abilities, like `T: copy + drop`. Read more about 
+[generic](https://diem.github.io/move/generics.html) here.
+
+We also add type parameters to our methods in the same manner. For example, `withdraw` becomes the following:
+```
+fun withdraw<CoinType>(addr: address, amount: u64) : Coin<CoinType> acquires Balance {
+    let balance = balance_of<CoinType>(addr);
+    assert!(balance >= amount, EINSUFFICIENT_BALANCE);
+    let balance_ref = &mut borrow_global_mut<Balance<CoinType>>(addr).coin.value;
+    *balance_ref = balance - amount;
+    Coin<CoinType> { value: amount }
+}
+```
+Take a look at `step_6/BasicCoin/sources/BasicCoin.move` to see the full implementation.
+
+At this point, readers who are familiar with Ethereum might notice that this module serves a similar purpose as 
+the [ERC20 token standard](https://ethereum.org/en/developers/docs/standards/tokens/erc-20/), which provides an 
+interface for implementing fungible tokens in smart contracts. One key advantage of using generics is the ability
+to reuse code since the generic library module already provides a standard implementation and the instantiation module
+can provide customizations by wrapping the standard implementation. We provide a little module that instantiates 
+the Coin type and customizes its transfer policy: only odd number of coins can be transferred. 
+
 
 ## Advanced steps
 

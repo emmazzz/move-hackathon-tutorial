@@ -44,7 +44,10 @@ compiled_package_info:
     ? address: 000000000000000000000000deadbeef
       name: BasicCoin
     : NamedAddr
-  source_digest: 311615F6DFB156BCC7C9D1C093CBEBBCDDD894E504BFA15C05F0106C32A30CA7
+    ? address: 000000000000000000000000deadbeef
+      name: MyOddCoin
+    : NamedAddr
+  source_digest: 4E1A9DF6E810CF5365EE99DA6FF1F31E0224612235A0F4283DBD16440C139F9B
   build_flags:
     dev_mode: false
     test_mode: false

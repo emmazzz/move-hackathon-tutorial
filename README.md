@@ -223,24 +223,24 @@ module NamedAddr::Coin {
   pass to the `mpm test` command that will show you the global state when
   the test fails. It should look something like this:
   ```
-┌── test_mint_10 ──────
-│ error[E11001]: test failure
-│    ┌─ step_2/BasicCoin/sources/FirstModule.move:22:9
-│    │
-│ 18 │     fun test_mint_10(account: signer) acquires Coin {
-│    │         ------------ In this function in 0xdeadbeef::Coin
-│    ·
-│ 22 │         assert!(borrow_global<Coin>(addr).value == 11, 0);
-│    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Test was not expected to abort but it aborted with 0 here
-│
-│
-│ ────── Storage state at point of failure ──────
-│ 0xcafe:
-│       => key 0xdeadbeef::Coin::Coin {
-│           value: 10
-│       }
-│
-└──────────────────
+    ┌── test_mint_10 ──────
+    │ error[E11001]: test failure
+    │    ┌─ step_2/BasicCoin/sources/FirstModule.move:22:9
+    │    │
+    │ 18 │     fun test_mint_10(account: signer) acquires Coin {
+    │    │         ------------ In this function in 0xdeadbeef::Coin
+    │    ·
+    │ 22 │         assert!(borrow_global<Coin>(addr).value == 11, 0);
+    │    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Test was not expected to abort but it aborted with 0 here
+    │
+    │
+    │ ────── Storage state at point of failure ──────
+    │ 0xcafe:
+    │       => key 0xdeadbeef::Coin::Coin {
+    │           value: 10
+    │       }
+    │
+    └──────────────────
   ```
 * [Bonus] Find a flag that allows you to gather test coverage information, and
   then play around with using the `mpm coverage` command to look at

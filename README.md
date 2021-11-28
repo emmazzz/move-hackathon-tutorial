@@ -162,12 +162,89 @@ $ mpm build
 
 ### Step 2: Add unit tests to my first Move module
 
-Now that we've written our first Move module, lets
+Now that we've written our first Move module, lets write a test to
+make sure minting works the way we expect it to.
+
+Unit tests in Move are similar to unit tests in Rust if you're familiar with
+them. There are a number of [test-related
+annotations that are worth exploring](https://github.com/diem/diem/blob/main/language/changes/4-unit-testing.md#testing-annotations-their-meaning-and-usage).
+Unit tests can be run with the `mpm package test` command. We'll see how
+they're used shortly.
 
 #### Adding dependencies
 
-#### Exercise?
-* Implement withdraw and deposit and add tests for them
+Before running unit tests, we need to add a dependency on the Move standard
+library. This can be done by adding an entry to the `[dependencies]`
+section of the `Move.toml`:
+
+```
+[dependencies]
+MoveStdlib = { git = "https://github.com/diem/diem.git", subdir = "language/move-stdlib", rev = "4d5329c", addr_subst = {"Std" = "0x1" } }
+```
+
+You can read more on Move package dependencies
+[here](https://diem.github.io/move/packages.html#movetoml).
+
+Once you've added this to the `Move.toml` file you should be able to run
+`mpm test`. You'll see something like this:
+
+```
+BUILDING MoveStdlib
+BUILDING BasicCoin
+Running Move unit tests
+Test result: OK. Total tests: 0; passed: 0; failed: 0
+```
+
+Let's now add a test to make sure that `BasicCoin::mint(account, 10)`
+stores a `Coin` resource with a value of `10` under `account`. We can do
+this by adding the following to our `Coin` module:
+
+```
+module NamedAddr::Coin {
+    // Only included in compilation for testing. Similar to #[cfg(testing)]
+    // in Rust.
+    #[test_only]
+    use Std::Signer;
+    ...
+    // Declare a unit test. It takes a signer called `account` with an
+    // address value of `0xCAFE`.
+    #[test(account = @0xCAFE)]
+    fun test_mint_10(account: signer) acquires Coin {
+        let addr = Signer::address_of(&account);
+        mint(account, 10);
+        // Make sure there is a `Coin` resource under `addr` with a value of `10`.
+        assert!(borrow_global<Coin>(addr).value == 10, 0);
+    }
+}
+```
+
+#### Exercise
+* Change the assertion to `11` so that it fails and the test fails. Find a flag that you can
+  pass to the `mpm test` command that will show you the global state when
+  the test fails. It should look something like this:
+  ```
+┌── test_mint_10 ──────
+│ error[E11001]: test failure
+│    ┌─ step_2/BasicCoin/sources/FirstModule.move:22:9
+│    │
+│ 18 │     fun test_mint_10(account: signer) acquires Coin {
+│    │         ------------ In this function in 0xdeadbeef::Coin
+│    ·
+│ 22 │         assert!(borrow_global<Coin>(addr).value == 11, 0);
+│    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Test was not expected to abort but it aborted with 0 here
+│
+│
+│ ────── Storage state at point of failure ──────
+│ 0xcafe:
+│       => key 0xdeadbeef::Coin::Coin {
+│           value: 10
+│       }
+│
+└──────────────────
+  ```
+* [Bonus] Find a flag that allows you to gather test coverage information, and
+  then play around with using the `mpm coverage` command to look at
+  coverage statistics and source coverage.
 
 ### Step 3: Design my BasicCoin module
 
@@ -183,15 +260,15 @@ public(script) fun transfer(from: signer, to: address, amount: u64) acquires Bal
 At the end of each function signature is an `acquires` list containing all the resources defined in this module accessed by the function.
 
 Notice that `balance_of` is a public function while `transfer` is a _public script_ function.
-Similar to Ethereum, users submit signed transactions to Move-powered blockchains to update the blockchain state. 
-We can invoke `transfer` method in a transaction script to modify the blockchain state. As mentioned in Step 1, only public script 
-functions can be called from a transaction script. Therefore, we declare `transfer` as a public script function. 
+Similar to Ethereum, users submit signed transactions to Move-powered blockchains to update the blockchain state.
+We can invoke `transfer` method in a transaction script to modify the blockchain state. As mentioned in Step 1, only public script
+functions can be called from a transaction script. Therefore, we declare `transfer` as a public script function.
 And by requiring the `from` argument be a `signer` instead of an `address`, we require that the transfer transaction
 must be signed by the `from` account.
 
-Next we look at the data structs we need for this module. 
+Next we look at the data structs we need for this module.
 
-In most Ethereum contracts, the balance of each address is stored in a _state variable_ of type 
+In most Ethereum contracts, the balance of each address is stored in a _state variable_ of type
 `mapping(address => uint256)`. This state variable is stored in the storage of a particular smart contract. In Move, however, storage
 works differently. A Move module doesn't have its own storage. Instead, Move "global storage" (what we call our
 blockchain state) is indexed by addresses. Under each address there are Move modules (code) and Move resources (values).
@@ -207,7 +284,7 @@ struct GlobalStorage {
 
 The Move resource storage under each address is a map from types to values. (An observant reader might observe that
 this means each address can only have one value of each type.) This conveniently provides us a native mapping indexed
-by addresses. In our BasicCoin module, we define the following `Balance` resource representing the number of coins 
+by addresses. In our BasicCoin module, we define the following `Balance` resource representing the number of coins
 each address holds:
 
 ```
@@ -217,7 +294,7 @@ struct Balance has key {
 }
 ```
 
-## TODO: change the diagrams to get rid of total supply 
+## TODO: change the diagrams to get rid of total supply
 
 Roughly the Move blockchain state should look like this:
 ![](diagrams/move_state.png)
@@ -226,20 +303,20 @@ In comparison, a Solidity blockchain state might look like this:
 
 ### Step 4: Implement my BasicCoin module
 
-We have created a Move package for you in folder `step_4` called `BasicCoin`. `sources` folder contains source code for 
-all your Move modules. `BasicCoin.move` lives inside this folder. In this section, we will take a closer look at the 
+We have created a Move package for you in folder `step_4` called `BasicCoin`. `sources` folder contains source code for
+all your Move modules. `BasicCoin.move` lives inside this folder. In this section, we will take a closer look at the
 implementation of the methods inside `BasicCoin.move`.
 
 #### Method `initialize`
 
-Unlike Solidity, Move doesn't have a built-in `constructor` method called at the instantiation of the smart contract. 
-We can, however, define our own initializer that can only be called by the module owner. We enforce this using the  
+Unlike Solidity, Move doesn't have a built-in `constructor` method called at the instantiation of the smart contract.
+We can, however, define our own initializer that can only be called by the module owner. We enforce this using the
 assert statement:
 ```
 assert!(Signer::address_of(&module_owner) == MODULE_OWNER, ENOT_MODULE_OWNER);
 ```
 Assert statements in Move can be used in this way: `assert!(<predicate>, <abort_code>);`. This means that if the `<predicate>`
-is false, then abort the transaction with `<abort_code>`. Here `MODULE_OWNER` and `ENOT_MODULE_OWNER` are both constants 
+is false, then abort the transaction with `<abort_code>`. Here `MODULE_OWNER` and `ENOT_MODULE_OWNER` are both constants
 defined at the beginning of the module.
 
 We then perform two operations in this method:
@@ -256,7 +333,7 @@ borrow_global<Balance>(owner).coin.value
 ```
 
 #### Method `transfer`
-This function withdraws tokens from `from`'s balance and deposits the tokens into `to`s balance. We take a closer look 
+This function withdraws tokens from `from`'s balance and deposits the tokens into `to`s balance. We take a closer look
 at `withdraw` helper function:
 ```
 fun withdraw(addr: address, amount: u64) : Coin acquires Balance {
@@ -267,14 +344,14 @@ fun withdraw(addr: address, amount: u64) : Coin acquires Balance {
     Coin { value: amount }
 }
 ```
-At the beginning of the method, we assert that the withdrawing account has enough balance. We then use `borrow_global_mut` 
-to get a mutable reference to the global storage, and `&mut` is used to create a [mutable reference](https://diem.github.io/move/references.html) to a field of a 
-struct. We then modify the balance through this mutable reference and return a new coin with the withdrawn amount. 
- 
+At the beginning of the method, we assert that the withdrawing account has enough balance. We then use `borrow_global_mut`
+to get a mutable reference to the global storage, and `&mut` is used to create a [mutable reference](https://diem.github.io/move/references.html) to a field of a
+struct. We then modify the balance through this mutable reference and return a new coin with the withdrawn amount.
 
-### Compiling our code 
 
-Now that we have implemented our BasicCoin contract, let's try building it using Move package by running the following command 
+### Compiling our code
+
+Now that we have implemented our BasicCoin contract, let's try building it using Move package by running the following command
 in `step_4/BasicCoin` folder:
 ```
 $ mpm build
@@ -288,15 +365,15 @@ The solution to this exercise can be found in `step_4_sol`.
 
 **Bonus exercises**
 - What would happen if we deposit too many tokens to a balance?
-- Is the initializer guaranteed to be called before anything else? If not, how can we 
+- Is the initializer guaranteed to be called before anything else? If not, how can we
 change the code to provide this guarantee?
 
 ### Step 5: Add unit tests to my BasicCoin module
 
 ### Step 6: Make my BasicCoin module generic
 
-In Move, we can use generics to define functions and structs over different input data types. Generics are a great 
-building block for library code. In this section, we are going to make our simple Coin module generic so that it can 
+In Move, we can use generics to define functions and structs over different input data types. Generics are a great
+building block for library code. In this section, we are going to make our simple Coin module generic so that it can
 serve as a library module that can be used by other user modules.
 
 First, we add type parameters to our data structs:
@@ -310,9 +387,9 @@ struct Balance<phantom CoinType> has key {
 }
 ```
 
-Here we declare the type parameter `CoinType` to be _phantom_ because `CoinType` is not used in the struct definition 
+Here we declare the type parameter `CoinType` to be _phantom_ because `CoinType` is not used in the struct definition
 or is only used as a phantom type parameter. There are ability constraints you can add to a type parameter to require
-that the type parameter has certain abilities, like `T: copy + drop`. Read more about 
+that the type parameter has certain abilities, like `T: copy + drop`. Read more about
 [generic](https://diem.github.io/move/generics.html) here.
 
 We also add type parameters to our methods in the same manner. For example, `withdraw` becomes the following:
@@ -327,12 +404,12 @@ fun withdraw<CoinType>(addr: address, amount: u64) : Coin<CoinType> acquires Bal
 ```
 Take a look at `step_6/BasicCoin/sources/BasicCoin.move` to see the full implementation.
 
-At this point, readers who are familiar with Ethereum might notice that this module serves a similar purpose as 
-the [ERC20 token standard](https://ethereum.org/en/developers/docs/standards/tokens/erc-20/), which provides an 
+At this point, readers who are familiar with Ethereum might notice that this module serves a similar purpose as
+the [ERC20 token standard](https://ethereum.org/en/developers/docs/standards/tokens/erc-20/), which provides an
 interface for implementing fungible tokens in smart contracts. One key advantage of using generics is the ability
 to reuse code since the generic library module already provides a standard implementation and the instantiation module
-can provide customizations by wrapping the standard implementation. We provide a little module that instantiates 
-the Coin type and customizes its transfer policy: only odd number of coins can be transferred. 
+can provide customizations by wrapping the standard implementation. We provide a little module that instantiates
+the Coin type and customizes its transfer policy: only odd number of coins can be transferred.
 
 
 ## Advanced steps

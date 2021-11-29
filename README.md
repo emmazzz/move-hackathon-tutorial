@@ -368,7 +368,41 @@ The solution to this exercise can be found in `step_4_sol`.
 - Is the initializer guaranteed to be called before anything else? If not, how can we
 change the code to provide this guarantee?
 
-### Step 5: Add unit tests to my BasicCoin module
+### Step 5: Adding and using unit tests with the BasicCoin module
+
+In this step we're going to take a look at all the different unit tests
+we've written to cover the code we wrote in step 4. We're also going to
+take a look at some tools we can use to help us write tests.
+
+To get started, run `mpm test` in [`step_5`](./step_5). You should see
+something like this:
+
+```
+CACHED MoveStdlib
+BUILDING BasicCoin
+Running Move unit tests
+[ PASS    ] 0xdeadbeef::BasicCoin::can_withdraw_amount
+[ PASS    ] 0xdeadbeef::BasicCoin::init_check_balance
+[ PASS    ] 0xdeadbeef::BasicCoin::init_non_owner
+[ PASS    ] 0xdeadbeef::BasicCoin::publish_balance_already_exists
+[ PASS    ] 0xdeadbeef::BasicCoin::publish_balance_has_zero
+[ PASS    ] 0xdeadbeef::BasicCoin::withdraw_dne
+[ PASS    ] 0xdeadbeef::BasicCoin::withdraw_too_much
+Test result: OK. Total tests: 7; passed: 7; failed: 0
+```
+
+Taking a look at the tests in the
+[`BasicCoin` module](./step_5/BasicCoin/sources/BasicCoin.move) we've tried
+to keep each unit test to testing one particular behavior.
+
+TODO: Explore some tests look at some of the annotations
+
+### Exercises
+* Write a unit test called `balance_dne` in the BasicCoin module that tests
+  the case where a `Balance` resource doesn't exist under the address that
+  `balance_of` is being called on.
+
+The solution to this exercise can be found in [`step_5_sol`](./step_5_sol)
 
 ### Step 6: Make my BasicCoin module generic
 

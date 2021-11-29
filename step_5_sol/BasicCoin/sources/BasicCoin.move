@@ -103,6 +103,12 @@ module NamedAddr::BasicCoin {
 
     #[test]
     #[expected_failure]
+    fun balance_of_dne() acquires Balance {
+        balance_of(@0x1);
+    }
+
+    #[test]
+    #[expected_failure]
     fun withdraw_dne() acquires Balance {
         // Need to unpack the coin since `Coin` is a resource
         Coin { value: _ } = withdraw(@0x1, 0);

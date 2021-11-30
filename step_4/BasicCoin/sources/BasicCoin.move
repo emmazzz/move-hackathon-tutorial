@@ -20,22 +20,21 @@ module NamedAddr::BasicCoin {
         coin: Coin
     }
 
+    /// Publish an empty balance resource under `account`'s address. This function must be called before
+    /// minting or transferring to the account.
+    public fun publish_balance(account: &signer) {
+        // TODO: add an assert to check that `account` doesn't already have a `Balance` resource.
+        let empty_coin = Coin { value: 0 };
+        move_to(account, Balance { coin:  empty_coin });
+    }
+
     /// Initialize this module.
-    public(script) fun initialize(module_owner: signer, total_supply: u64) {
+    public(script) fun mint(module_owner: signer, mint_addr: address, amount: u64) {
         // Only the owner of the module can initialize this module
         assert!(Signer::address_of(&module_owner) == MODULE_OWNER, Errors::requires_address(ENOT_MODULE_OWNER));
 
-        // Publish an empty balance under the module owner's address
-        publish_balance(&module_owner);
-        // Deposit `total_value` amount of tokens to module owner's balance
-        deposit(MODULE_OWNER, Coin { value: total_supply });
-    }
-
-    /// Publish an empty balance resource under `account`'s address.
-    fun publish_balance(account: &signer) {
-        let empty_coin = Coin { value: 0 };
-        assert!(exists<Balance>(Signer::address_of(account)), Errors::already_published(EALREADY_HAS_BALANCE));
-        move_to(account, Balance { coin:  empty_coin });
+        // Deposit `amount` of tokens to `mint_addr`'s balance
+        deposit(mint_addr, Coin { value: amount });
     }
 
     /// Returns the balance of `owner`.

@@ -254,7 +254,17 @@ be minted and transferred between balances under different addresses.
 The signatures of the public Move function are the following:
 
 ```
+/// Publish an empty balance resource under `account`'s address. This function must be called before
+/// minting or transferring to the account.
+public fun publish_balance(account: &signer);
+
+/// Mint `amount` tokens to `mint_addr`. Mint must be approved by the module owner.
+public(script) fun mint(module_owner: signer, mint_addr: address, amount: u64) acquires Balance;
+
+/// Returns the balance of `owner`.
 public fun balance_of(owner: address): u64 acquires Balance;
+
+/// Transfers `amount` of tokens from `from` to `to`.
 public(script) fun transfer(from: signer, to: address, amount: u64) acquires Balance;
 ```
 At the end of each function signature is an `acquires` list containing all the resources defined in this module accessed by the function.
@@ -264,11 +274,11 @@ Similar to Ethereum, users submit signed transactions to Move-powered blockchain
 We can invoke `transfer` method in a transaction script to modify the blockchain state. As mentioned in Step 1, only public script
 functions can be called from a transaction script. Therefore, we declare `transfer` as a public script function.
 And by requiring the `from` argument be a `signer` instead of an `address`, we require that the transfer transaction
-must be signed by the `from` account.
+must be approved by the `from` account.
 
 Next we look at the data structs we need for this module.
 
-In most Ethereum contracts, the balance of each address is stored in a _state variable_ of type
+If you are familiar with Ethereum contracts, in most Ethereum contracts, the balance of each address is stored in a _state variable_ of type
 `mapping(address => uint256)`. This state variable is stored in the storage of a particular smart contract. In Move, however, storage
 works differently. A Move module doesn't have its own storage. Instead, Move "global storage" (what we call our
 blockchain state) is indexed by addresses. Under each address there are Move modules (code) and Move resources (values).
@@ -294,38 +304,51 @@ struct Balance has key {
 }
 ```
 
-## TODO: change the diagrams to get rid of total supply
-
 Roughly the Move blockchain state should look like this:
-![](diagrams/move_state.png)
-In comparison, a Solidity blockchain state might look like this:
-![](diagrams/solidity_state.png)
 
+![](diagrams/move_state.png)
+
+In comparison, a Solidity blockchain state might look like this:
+
+![](diagrams/solidity_state.png)
 ### Step 4: Implement my BasicCoin module
 
 We have created a Move package for you in folder `step_4` called `BasicCoin`. `sources` folder contains source code for
 all your Move modules. `BasicCoin.move` lives inside this folder. In this section, we will take a closer look at the
 implementation of the methods inside `BasicCoin.move`.
 
-#### Method `initialize`
+#### Method `public_balance`
 
-Unlike Solidity, Move doesn't have a built-in `constructor` method called at the instantiation of the smart contract.
-We can, however, define our own initializer that can only be called by the module owner. We enforce this using the
-assert statement:
+This method publishes a `Balance` resource to a given address. Since this resource is needed to receive coins through 
+minting or transferring, `publish_balance` method must be called by a user before they can receive money, including the 
+module owner.
+
+This method uses a `move_to` operation to publish the resource:
+
 ```
-assert!(Signer::address_of(&module_owner) == MODULE_OWNER, ENOT_MODULE_OWNER);
+let empty_coin = Coin { value: 0 };
+move_to(account, Balance { coin:  empty_coin });
+```
+
+#### Method `mint`
+
+`mint` method mints coins to a given account. Here we require that `mint` must be approved
+by the module owner. We enforce this using the assert statement:
+```
+assert!(Signer::address_of(&module_owner) == MODULE_OWNER, Errors::requires_address(ENOT_MODULE_OWNER));
 ```
 Assert statements in Move can be used in this way: `assert!(<predicate>, <abort_code>);`. This means that if the `<predicate>`
 is false, then abort the transaction with `<abort_code>`. Here `MODULE_OWNER` and `ENOT_MODULE_OWNER` are both constants
-defined at the beginning of the module.
+defined at the beginning of the module. And `Errors` module defines common error categories we can use.
 
-We then perform two operations in this method:
-1. Publish an empty `Balance` resource under the module owner's address.
-2. Deposit a coin with value `total_supply` to the newly created balance of the module owner.
+We then perform deposit a coin with value `amount` to the balance of `mint_addr`.
+```
+deposit(mint_addr, Coin { value: amount });
+```
 
 #### Method `balance_of`
 
-Similar to `total_supply`, we use `borrow_global`, one of the global storage operators, to read from the global storage.
+We use `borrow_global`, one of the global storage operators, to read from the global storage.
 ```
 borrow_global<Balance>(owner).coin.value
                  |       |       \    /
@@ -358,15 +381,15 @@ $ mpm build
 ```
 
 ### Exercises
-There is a `TODO` in our module, left as an exercise for the reader:
+There are two `TODO`s in our module, left as exercises for the reader:
+- Finish implementing `publish_balance` method.
 - Implement `deposit` method.
 
-The solution to this exercise can be found in `step_4_sol`.
+The solution to this exercise can be found in `step_4_sol` folder.
 
 **Bonus exercises**
 - What would happen if we deposit too many tokens to a balance?
-- Is the initializer guaranteed to be called before anything else? If not, how can we
-change the code to provide this guarantee?
+- Does the solution code provided in `step_4_sol` have any bugs? 
 
 ### Step 5: Adding and using unit tests with the BasicCoin module
 
@@ -398,7 +421,7 @@ to keep each unit test to testing one particular behavior.
 TODO: Explore some tests look at some of the annotations
 
 ### Exercises
-* Write a unit test called `balance_dne` in the BasicCoin module that tests
+* Write a unit test called `balance_of_dne` in the BasicCoin module that tests
   the case where a `Balance` resource doesn't exist under the address that
   `balance_of` is being called on.
 
@@ -528,7 +551,7 @@ The method deposits the `check` into `addr`. The specification is defined below:
 The signature of the method `transfer` is given below:
 
 ```
-public(script) fun transfer<CoinType>(from: signer, to: address, amount: u64) acquires Balance
+public fun transfer<CoinType: drop>(from: &signer, to: address, amount: u64, _witness: CoinType) acquires Balance
 ```
 
 The method transfers the `amount` of coin from the account of `from` to the address `to`. 
@@ -554,7 +577,7 @@ The function `Signer::address_of` is called to obtain the address of `from`. The
 
 ### Exercises
 - Implement the aborts_if conditions for the `transfer` method.
-- Implement the specification for the `initialize` and `publish_balance` method.
+- Implement the specification for the `mint` and `publish_balance` method.
 
 The solution to this exercise can be found in `step_7_sol`.
 

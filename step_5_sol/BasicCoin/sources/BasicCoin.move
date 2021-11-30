@@ -20,23 +20,22 @@ module NamedAddr::BasicCoin {
         coin: Coin
     }
 
-    /// Initialize this module.
-    public(script) fun initialize(module_owner: signer, total_supply: u64) acquires Balance {
-        // Only the owner of the module can initialize this module
-        assert!(Signer::address_of(&module_owner) == MODULE_OWNER, Errors::requires_address(ENOT_MODULE_OWNER));
-
-        // Publish an empty balance under the module owner's address
-        publish_balance(&module_owner);
-        // Deposit `total_value` amount of tokens to module owner's balance
-        deposit(MODULE_OWNER, Coin { value: total_supply });
-    }
-
-    /// Publish an empty balance resource under `account`'s address.
-    fun publish_balance(account: &signer) {
+    /// Publish an empty balance resource under `account`'s address. This function must be called before
+    /// minting or transferring to the account.
+    public fun publish_balance(account: &signer) {
         let empty_coin = Coin { value: 0 };
         // TODO: Remove this ! and have them fix it
         assert!(!exists<Balance>(Signer::address_of(account)), Errors::already_published(EALREADY_HAS_BALANCE));
         move_to(account, Balance { coin:  empty_coin });
+    }
+
+    /// Mint `amount` tokens to `mint_addr`. Mint must be approved by the module owner.
+    public(script) fun mint(module_owner: signer, mint_addr: address, amount: u64) acquires Balance {
+        // Only the owner of the module can initialize this module
+        assert!(Signer::address_of(&module_owner) == MODULE_OWNER, Errors::requires_address(ENOT_MODULE_OWNER));
+
+        // Deposit `amount` of tokens to `mint_addr`'s balance
+        deposit(mint_addr, Coin { value: amount });
     }
 
     /// Returns the balance of `owner`.
@@ -70,21 +69,20 @@ module NamedAddr::BasicCoin {
 
     #[test(account = @0x1)]
     #[expected_failure] // This test should abort
-    public(script) fun init_non_owner(account: signer) acquires Balance {
+    public(script) fun mint_non_owner(account: signer) acquires Balance {
         // Make sure the address we've chosen doesn't match the module
         // owner address
+        publish_balance(&account);
         assert!(Signer::address_of(&account) != MODULE_OWNER, 0);
-        initialize(account, 10);
+        mint(account, @0x1, 10);
     }
 
     #[test(account = @NamedAddr)]
-    public(script) fun init_check_balance(account: signer) acquires Balance {
-        // Make sure the address we've chosen doesn't match the module
-        // owner address
-        let total_supply = 1000;
+    public(script) fun mint_check_balance(account: signer) acquires Balance {
         let addr = Signer::address_of(&account);
-        initialize(account, total_supply);
-        assert!(balance_of(addr) == total_supply, 0);
+        publish_balance(&account);
+        mint(account, @NamedAddr, 42);
+        assert!(balance_of(addr) == 42, 0);
     }
 
     #[test(account = @0x1)]
@@ -124,10 +122,11 @@ module NamedAddr::BasicCoin {
 
     #[test(account = @NamedAddr)]
     public(script) fun can_withdraw_amount(account: signer) acquires Balance {
-        let total_supply = 1000;
+        publish_balance(&account);
+        let amount = 1000;
         let addr = Signer::address_of(&account);
-        initialize(account, total_supply);
-        let Coin { value } = withdraw(addr, total_supply);
-        assert!(value == total_supply, 0);
+        mint(account, addr, amount);
+        let Coin { value } = withdraw(addr, amount);
+        assert!(value == amount, 0);
     }
 }
